@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+ultralytics
+insightface
+faiss-cpu
+paddleocr
+paddlepaddle-gpu
+onnxruntime-gpu
+opencv-python-headless
+numpy

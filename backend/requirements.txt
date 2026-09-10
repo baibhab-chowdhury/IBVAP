@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+websockets
+sqlalchemy
+aiosqlite
+opencv-python-headless
+supervision
+shapely
+httpx
+pillow
+python-dotenv
