@@ -5,3 +5,8 @@
 # Allow anyone to publish or read to any path
 paths:
   all_others:
+
+hlsAllowOrigin: '*'
+webrtcAllowOrigin: '*'
+api: yes
+apiAllowOrigin: '*'
