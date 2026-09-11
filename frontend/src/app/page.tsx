@@ -158,33 +158,52 @@ export default function Dashboard() {
                   <div className="flex items-center space-x-2">
                     <input 
                       type="text" 
-                      placeholder="http://192.168.x.x:8080/video" 
+                      placeholder="http://192.168.1.5:8080/video" 
                       className="text-black text-xs px-2 py-1 rounded w-48"
                       id="phoneUrlInput"
+                      defaultValue="http://192.168.1.x:8080/video"
                     />
                     <button 
                       className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded shadow"
                       onClick={async () => {
                         const url = (document.getElementById('phoneUrlInput') as HTMLInputElement).value;
                         if (url) {
-                          await fetch('http://localhost:8000/api/cameras/2/switch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url })
-                          });
-                          alert("Switched Cam 2 to Phone Stream!");
+                          try {
+                            const res = await fetch('http://localhost:8000/api/cameras/2/switch', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ url })
+                            });
+                            if (!res.ok) throw new Error("Switch failed");
+                            alert("Switched Cam 2 to Phone Stream!");
+                          } catch (e) {
+                            alert("Failed to connect phone. Is the backend running?");
+                          }
                         } else {
                           // Switch back to script loop
                           await fetch('http://localhost:8000/api/cameras/2/switch', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: "rtsp://localhost:8554/cam2" })
+                            body: JSON.stringify({ url: "C2.mp4" })
                           });
-                          alert("Switched back to C2.mp4 Loop");
+                          alert("Switched back to default Clip");
                         }
                       }}
                     >
                       Connect Phone
+                    </button>
+                    <button 
+                      className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-3 py-1 rounded shadow"
+                      onClick={async () => {
+                          await fetch('http://localhost:8000/api/cameras/2/switch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: "C2.mp4" })
+                          });
+                          alert("Disconnected Phone. Reverted to Clip.");
+                      }}
+                    >
+                      Disconnect
                     </button>
                   </div>
                 )}

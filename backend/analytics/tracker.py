@@ -60,6 +60,12 @@ class MultiObjectTracker:
             # Keep only the last 100 points to save memory
             if len(self.trajectories[track_id]) > 100:
                 self.trajectories[track_id].pop(0)
+                
+        # Clean up trajectories for objects that have left the scene
+        active_ids = set(tracked_detections.tracker_id)
+        stale_ids = [tid for tid in self.trajectories.keys() if tid not in active_ids]
+        for tid in stale_ids:
+            del self.trajectories[tid]
         
         # Create labels for bounding boxes
         # Format: "Person #12 0.85"

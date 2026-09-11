@@ -49,8 +49,6 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
               hls.recoverMediaError();
             } else {
               hls.destroy();
-              // Ultimate fallback: Just reload the page if the stream completely dies
-              setTimeout(() => window.location.reload(), 2000);
             }
           }
         });
@@ -61,12 +59,37 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
       } 
       else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = streamUrl;
-        videoRef.current.addEventListener('loadedmetadata', () => {
-          videoRef.current?.play();
-        });
+        const playVideo = () => videoRef.current?.play();
+        videoRef.current.addEventListener('loadedmetadata', playVideo);
+        return () => {
+          videoRef.current?.removeEventListener('loadedmetadata', playVideo);
+        };
       }
     }
   }, [streamUrl, rawMp4Url]);
+
+  // Track canvas dimensions without forcing layout recalculation on every frame
+  const dimensionsRef = useRef({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        dimensionsRef.current = {
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        };
+        // Update canvas internal resolution to match display size
+        if (canvasRef.current) {
+          canvasRef.current.width = entry.contentRect.width;
+          canvasRef.current.height = entry.contentRect.height;
+        }
+      }
+    });
+    
+    observer.observe(videoRef.current);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     // Draw bounding boxes when detections change
     const canvas = canvasRef.current;
@@ -82,10 +105,6 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Match canvas internal resolution to the video element's display size
-    canvas.width = video.clientWidth;
-    canvas.height = video.clientHeight;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 

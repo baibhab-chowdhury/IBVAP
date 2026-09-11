@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
-import { fabric } from 'fabric';
+// fabric is dynamically imported below to avoid SSR issues
 
 interface Point {
   x: number;
@@ -16,30 +16,35 @@ interface ZoneDrawerProps {
 
 export default function ZoneDrawer({ width, height, onSaveZone, bgImageUrl }: ZoneDrawerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [canvas, setCanvas] = useState<any>(null); // any to avoid strict types for dynamic import
   const [points, setPoints] = useState<Point[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [lines, setLines] = useState<fabric.Line[]>([]);
+  const [lines, setLines] = useState<any[]>([]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const c = new fabric.Canvas(canvasRef.current, {
-      selection: false,
-      defaultCursor: 'crosshair',
+    
+    let c: any = null;
+    
+    import('fabric').then(({ fabric }) => {
+      c = new fabric.Canvas(canvasRef.current, {
+        selection: false,
+        defaultCursor: 'crosshair',
+      });
+
+      if (bgImageUrl) {
+        fabric.Image.fromURL(bgImageUrl, (img) => {
+          img.scaleToWidth(width);
+          img.scaleToHeight(height);
+          c.setBackgroundImage(img, c.renderAll.bind(c));
+        });
+      }
+
+      setCanvas(c);
     });
 
-    if (bgImageUrl) {
-      fabric.Image.fromURL(bgImageUrl, (img) => {
-        img.scaleToWidth(width);
-        img.scaleToHeight(height);
-        c.setBackgroundImage(img, c.renderAll.bind(c));
-      });
-    }
-
-    setCanvas(c);
-
     return () => {
-      c.dispose();
+      if (c) c.dispose();
     };
   }, [width, height, bgImageUrl]);
 

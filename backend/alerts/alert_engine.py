@@ -10,6 +10,10 @@ class AlertEngine:
 
     def _check_cooldown(self, alert_key):
         """Returns True if the alert is allowed (not in cooldown)."""
+        # Periodically clean up memory
+        if len(self.recent_alerts) > 1000:
+            self.cleanup_old_alerts()
+            
         current_time = time.time()
         if alert_key in self.recent_alerts:
             time_since_last = current_time - self.recent_alerts[alert_key]

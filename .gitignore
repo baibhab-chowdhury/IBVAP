@@ -43,10 +43,37 @@ events_storage/
 *.mp4
 *.avi
 *.mkv
+
+# Ignore all images by default (to avoid accidental large uploads)
 *.jpg
 *.jpeg
 *.png
 
-# OS Files
+# EXCEPT for our baseline face registry!
+!registered_faces/*.jpeg
+!registered_faces/*.jpg
+!registered_faces/*.png
+
+# Ignore large binaries, models, and secrets
+*.exe
+scripts/mediamtx.exe
+mediamtx
+*.pt
+*.pth
+*.onnx
+*.key
+*.crt
+*.pem
+scripts/auto.crt
+scripts/auto.key
+scripts/playlist.txt
+inference_server/face_db/faces.index
+
+# Editor / OS Files
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.log
+*.env
+!*.env.example

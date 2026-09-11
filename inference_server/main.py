@@ -60,7 +60,7 @@ async def detect(
             continue
             
         if det["class_name"] == "person":
-            if frs.is_loaded() or frs.get_enrolled_count() > 0:
+            if frs.get_enrolled_count() > 0:
                 match = frs.identify(crop)
                 if match:
                     det["face_name"] = match["match_name"]

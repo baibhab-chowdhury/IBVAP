@@ -30,8 +30,8 @@ class YoloDetector:
     def predict(self, img, night_mode=False):
         self.load()
         
-        if night_mode:
-            img = self.apply_clahe(img)
+        # Note: night_mode enhancement (CLAHE) is now handled by the backend's night_enhancer.py
+        # to avoid double-processing. We keep the flag for future model-specific adjustments if needed.
             
         results = self.model(img, verbose=False, classes=self.target_classes, half=torch.cuda.is_available())
         

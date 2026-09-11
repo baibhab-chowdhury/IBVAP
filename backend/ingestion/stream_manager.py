@@ -76,15 +76,44 @@ class StreamWorker:
         # 3. Update ByteTrack
         annotated_frame, tracked_data = self.tracker.update(detections, processed_frame)
         
-        # TODO: 4. Zone Intrusion Checks
-        # TODO: 5. Behavior Analytics Checks
+        # 4. Zone Intrusion Checks
+        from analytics.virtual_fence import fence_manager
+        intrusions = fence_manager.check_intrusions(tracked_data, self.camera_id)
+        
+        # 5. Behavior Analytics Checks
+        from analytics.behavior import behavior_analyzer
+        loitering_alerts = behavior_analyzer.analyze_loitering(intrusions, self.camera_id)
+        crowd_alerts = behavior_analyzer.analyze_crowd_density(intrusions)
+        
+        # Check wrong direction (example usage for all tracked objects)
+        from alerts.alert_engine import alert_engine
+        from services.websocket_manager import manager
+        from alerts.event_recorder import event_recorder
+        
+        new_alerts = alert_engine.process_intrusions(intrusions, self.camera_id)
+        
+        for alert_data in loitering_alerts:
+            a = alert_engine.process_behavior("LOITERING", self.camera_id, alert_data["track_id"], alert_data["description"])
+            if a: new_alerts.append(a)
+            
+        for alert_data in crowd_alerts:
+            a = alert_engine.process_behavior("CROWD_DENSITY", self.camera_id, alert_data["zone_id"], alert_data["description"])
+            if a: new_alerts.append(a)
+
+        # Broadcast alerts and trigger event recording
+        for alert in new_alerts:
+            # Broadcast to frontend
+            asyncio.create_task(manager.broadcast_json({"type": "alert", "data": alert}))
+            # Save snapshot & video clip
+            asyncio.create_task(event_recorder.record_event(alert, self.frame_buffer, processed_frame.copy()))
         
         return {
             "camera_id": self.camera_id,
             "raw_frame": processed_frame,
             "annotated_frame": annotated_frame,
             "raw_detections": detections,
-            "tracking": tracked_data
+            "tracking": tracked_data,
+            "active_intrusions": intrusions
         }
 
 class StreamManager:

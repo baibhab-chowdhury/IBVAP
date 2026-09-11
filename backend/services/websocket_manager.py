@@ -15,15 +15,17 @@ class ConnectionManager:
 
     async def broadcast_json(self, message: dict):
         """Broadcasts a JSON message to all connected React clients."""
-        disconnected = []
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                disconnected.append(connection)
+        if not self.active_connections:
+            return
+            
+        results = await asyncio.gather(
+            *[connection.send_json(message) for connection in self.active_connections],
+            return_exceptions=True
+        )
         
         # Clean up dead connections
-        for conn in disconnected:
-            self.disconnect(conn)
+        for conn, result in zip(self.active_connections[:], results):
+            if isinstance(result, Exception):
+                self.disconnect(conn)
 
 manager = ConnectionManager()

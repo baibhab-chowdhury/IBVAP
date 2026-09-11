@@ -1,44 +1,25 @@
 # ============================================================
-# IBVAP - 2-Camera Mode Simulator
+# IBVAP - MediaMTX Launcher
 # ============================================================
-# Cam 1: Endless Slideshow of ALL footage in the folder
-# Cam 2: Loops C2.mp4 (Subhodeep's video) by default
+# The backend now handles the FFmpeg source streams directly.
+# This script just launches the MediaMTX server.
 # ============================================================
-
-$FOOTAGE_DIR = "..\footage"
 
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  IBVAP 2-Camera Mode Simulator"             -ForegroundColor Cyan
+Write-Host "  IBVAP MediaMTX Server Launcher"             -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 
 # Start MediaMTX
-$mediamtx = Start-Process -FilePath "mediamtx.exe" -PassThru -WindowStyle Minimized
-Start-Sleep -Seconds 3
-Write-Host "MediaMTX started." -ForegroundColor Green
-
-# Start Cam 2 (Subhodeep Loop) in background
-$cam2Path = Join-Path $FOOTAGE_DIR "C2.mp4"
-$args2 = @("-stream_loop", "-1", "-re", "-i", $cam2Path, "-an", "-c:v", "copy", "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam2")
-$cam2Proc = Start-Process -FilePath "ffmpeg" -ArgumentList $args2 -PassThru -WindowStyle Minimized
-
-Write-Host "Cam 2 is streaming C2.mp4 (Looping)" -ForegroundColor Yellow
-
-# Start Cam 1 (Slideshow) in foreground loop
-$videos = Get-ChildItem -Path $FOOTAGE_DIR -Filter *.mp4
-
-Write-Host "Cam 1 is starting the Slideshow of $($videos.Count) videos..." -ForegroundColor Yellow
+$MTX_EXE = Join-Path $PSScriptRoot "mediamtx.exe"
+$mediamtx = Start-Process -FilePath $MTX_EXE -WorkingDirectory $PSScriptRoot -PassThru -WindowStyle Minimized
+Write-Host "MediaMTX started (PID: $($mediamtx.Id))." -ForegroundColor Green
+Write-Host "Keep this window open or press Ctrl+C to stop it." -ForegroundColor Yellow
 
 try {
     while ($true) {
-        foreach ($vid in $videos) {
-            Write-Host "  [Cam 1 Playing] $($vid.Name)" -ForegroundColor Cyan
-            # No -stream_loop, and -Wait makes PowerShell wait for the video to finish before starting the next
-            $args1 = @("-re", "-i", $vid.FullName, "-an", "-c:v", "copy", "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam1")
-            $proc = Start-Process -FilePath "ffmpeg" -ArgumentList $args1 -Wait -WindowStyle Minimized
-        }
+        Start-Sleep -Seconds 5
     }
 } finally {
-    Write-Host "Shutting down streams..." -ForegroundColor Yellow
-    if ($cam2Proc) { Stop-Process -Id $cam2Proc.Id -Force -ErrorAction SilentlyContinue }
+    Write-Host "Shutting down MediaMTX..." -ForegroundColor Yellow
     if ($mediamtx) { Stop-Process -Id $mediamtx.Id -Force -ErrorAction SilentlyContinue }
 }

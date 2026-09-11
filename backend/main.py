@@ -17,21 +17,32 @@ app.add_middleware(
 app.include_router(routes_cameras.router, prefix="/api/cameras", tags=["cameras"])
 
 import asyncio
+import os
+from dotenv import load_dotenv
 from services.websocket_manager import manager
 from ingestion.stream_manager import stream_manager
+from ingestion.source_manager import source_manager
+
+load_dotenv()
+FOOTAGE_DIR = os.getenv("FOOTAGE_DIR", "../footage")
+CAM2_DEFAULT_CLIP = os.getenv("CAM2_DEFAULT_CLIP", "C2.mp4")
 
 @app.on_event("startup")
 async def on_startup():
     await init_db()
     
-    # Auto-register the 2-Camera Mode
-    cameras = [
-        {"id": 1, "url": "rtsp://localhost:8554/cam1"},  # Slideshow Cam
-        {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # Subhodeep / Phone Cam
-    ]
+    # Start FFmpeg -> MediaMTX feeds
+    source_manager.start_cam1_slideshow(FOOTAGE_DIR)
     
-    for cam in cameras:
-        stream_manager.add_stream(camera_id=cam["id"], rtsp_url=cam["url"])
+    cam2_path = os.path.join(FOOTAGE_DIR, CAM2_DEFAULT_CLIP)
+    if os.path.exists(cam2_path):
+        source_manager.start_cam2(cam2_path)
+    else:
+        print(f"Warning: {cam2_path} not found.")
+
+    # Backend always reads from MediaMTX
+    stream_manager.add_stream(camera_id=1, rtsp_url="rtsp://localhost:8554/cam1")
+    stream_manager.add_stream(camera_id=2, rtsp_url="rtsp://localhost:8554/cam2")
     
     # Start the main background pipeline loop
     asyncio.create_task(run_pipeline())
@@ -42,8 +53,11 @@ class StreamSwitchRequest(BaseModel):
 
 @app.post("/api/cameras/{cam_id}/switch")
 async def switch_camera(cam_id: int, request: StreamSwitchRequest):
-    stream_manager.update_stream(camera_id=cam_id, new_rtsp_url=request.url)
-    return {"status": "success", "message": f"Camera {cam_id} switched to {request.url}"}
+    if cam_id != 2:
+        return {"status": "error", "message": "Only Cam 2 supports source switching"}
+        
+    source_manager.switch_cam2(request.url)
+    return {"status": "success", "message": f"Cam 2 switched to {request.url}"}
 
 async def run_pipeline():
     """Main background loop that processes frames and broadcasts tracking data."""
