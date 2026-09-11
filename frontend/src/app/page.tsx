@@ -22,26 +22,28 @@ export default function Dashboard() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setWsData(data);
         
-        // Update Live Stats
-        let peopleCount = 0;
-        let vehicleCount = 0;
-        
-        // Count objects across all cameras
-        Object.values(data.cameras || {}).forEach((camData: any) => {
-          (camData.detections || []).forEach((det: any) => {
-            if (det.class_name === 'person') peopleCount++;
-            else if (['car', 'bus', 'truck', 'motorcycle'].includes(det.class_name)) vehicleCount++;
+        if (data.type === "tracking_update") {
+          setWsData((prev: any) => {
+            const newData = { ...prev, [data.camera_id]: { detections: data.detections } };
+            
+            // Recalculate stats based on all cameras
+            let peopleCount = 0;
+            let vehicleCount = 0;
+            Object.values(newData).forEach((camData: any) => {
+              (camData.detections || []).forEach((det: any) => {
+                if (det.class_name === 'person') peopleCount++;
+                else if (['car', 'bus', 'truck', 'motorcycle'].includes(det.class_name)) vehicleCount++;
+              });
+            });
+            setStats({ people: peopleCount, vehicles: vehicleCount });
+            
+            return newData;
           });
-        });
-        
-        setStats({ people: peopleCount, vehicles: vehicleCount });
-
-        // Prepend new alerts to the feed (keep last 20)
-        if (data.alerts && data.alerts.length > 0) {
-          setAlerts(prev => {
-            const newAlerts = [...data.alerts, ...prev];
+        } else if (data.type === "alert") {
+          // Prepend new alert to the feed
+          setAlerts((prev: any) => {
+            const newAlerts = [data.alert, ...prev];
             return newAlerts.slice(0, 20); // Keep max 20 alerts
           });
         }

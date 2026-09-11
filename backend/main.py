@@ -48,16 +48,32 @@ async def run_pipeline():
             if result and result["tracking"] is not None:
                 # Convert ByteTrack detections to JSON-friendly format for the frontend
                 tracker_data = result["tracking"]
+                frame_h, frame_w, _ = result["raw_frame"].shape
+                
                 boxes = []
+                
+                # YOLOv8 default classes
+                CLASS_MAP = {
+                    0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 
+                    5: "bus", 7: "truck"
+                }
+                
                 for i in range(len(tracker_data)):
-                    box = tracker_data.xyxy[i].tolist()
+                    # Absolute pixels from YOLO/ByteTrack
+                    x1, y1, x2, y2 = tracker_data.xyxy[i].tolist()
+                    
+                    # Normalize to 0-1 for the React Canvas
+                    norm_box = [x1/frame_w, y1/frame_h, x2/frame_w, y2/frame_h]
+                    
                     track_id = int(tracker_data.tracker_id[i]) if tracker_data.tracker_id is not None else -1
                     cls_id = int(tracker_data.class_id[i])
                     conf = float(tracker_data.confidence[i])
+                    
                     boxes.append({
-                        "bbox": box,
+                        "bbox": norm_box,
                         "track_id": track_id,
                         "class_id": cls_id,
+                        "class_name": CLASS_MAP.get(cls_id, "unknown"),
                         "confidence": conf
                     })
                 

@@ -44,7 +44,7 @@ class FaceRecognizer:
         width = target_face.bbox[2] - target_face.bbox[0]
         height = target_face.bbox[3] - target_face.bbox[1]
         
-        if width < 80 or height < 80:
+        if width < 30 or height < 30:
             return None # Face too blurry/distant, discard to save compute
             
         return target_face.embedding
