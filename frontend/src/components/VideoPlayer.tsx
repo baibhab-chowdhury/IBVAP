@@ -28,33 +28,42 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
     // Otherwise, try to load the Live HLS Stream
     if (streamUrl) {
       if (Hls.isSupported()) {
-        const hls = new Hls({
-          // Reduce timeout thresholds to recover faster
-          manifestLoadingMaxRetry: 10,
-          manifestLoadingRetryDelay: 1000,
-        });
-        hls.loadSource(streamUrl);
-        hls.attachMedia(videoRef.current);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current?.play().catch(() => console.log("Autoplay prevented"));
-        });
+        let hls: Hls | null = null;
         
-        // Auto-recover from stream drops (bypasses 401/500 errors when video switches)
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            console.log("HLS Error:", data.type, "Attempting recovery...");
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls.startLoad();
-            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              hls.recoverMediaError();
-            } else {
-              hls.destroy();
-            }
+        const initPlayer = () => {
+          if (hls) {
+            hls.destroy();
           }
-        });
+          hls = new Hls({
+            manifestLoadingMaxRetry: 10,
+            manifestLoadingRetryDelay: 1000,
+          });
+          hls.loadSource(streamUrl);
+          hls.attachMedia(videoRef.current!);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            videoRef.current?.play().catch(() => console.log("Autoplay prevented"));
+          });
+          
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                console.log("Fatal Network/401 Error. Rebuilding HLS session...");
+                // A 401 means the backend restarted FFmpeg and killed our HLS session.
+                // We MUST completely rebuild the player to get a new session ID.
+                setTimeout(initPlayer, 1500);
+              } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError();
+              } else {
+                hls.destroy();
+              }
+            }
+          });
+        };
+        
+        initPlayer();
         
         return () => {
-          hls.destroy();
+          if (hls) hls.destroy();
         };
       } 
       else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
