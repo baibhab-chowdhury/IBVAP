@@ -138,10 +138,10 @@ export default function Dashboard() {
         {/* 2x2 Video Grid */}
         <div className="flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
-            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/E1.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
-            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2.mp4" : undefined} detections={wsData?.["3"]?.detections || []} />
-            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/F2.mp4" : undefined} detections={wsData?.["4"]?.detections || []} />
+            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
+            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/E1_loop.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
+            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2_loop.mp4" : undefined} detections={wsData?.["3"]?.detections || []} />
+            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/F2_loop.mp4" : undefined} detections={wsData?.["4"]?.detections || []} />
           </div>
         </div>
         
