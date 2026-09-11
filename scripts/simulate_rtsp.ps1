@@ -57,7 +57,12 @@ foreach ($cam in $cameras) {
     # -an              = drop audio (prevents MediaMTX 400 Bad Request errors)
     $rtspUrl = "rtsp://localhost:8554/$($cam.Name)"
     
-    $ffmpegArgs = "-stream_loop -1 -re -i `"$videoPath`" -an -c:v copy -f rtsp -rtsp_transport tcp `"$rtspUrl`""
+    # Use -c:v copy for max speed, EXCEPT for F2.mp4 (Cam 4) which is upside down and needs re-encoding
+    if ($cam.Name -eq "cam4") {
+        $ffmpegArgs = "-stream_loop -1 -re -i `"$videoPath`" -an -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp `"$rtspUrl`""
+    } else {
+        $ffmpegArgs = "-stream_loop -1 -re -i `"$videoPath`" -an -c:v copy -f rtsp -rtsp_transport tcp `"$rtspUrl`""
+    }
     
     $proc = Start-Process -FilePath "ffmpeg" -ArgumentList $ffmpegArgs -PassThru -WindowStyle Minimized
     $ffmpegProcesses += $proc

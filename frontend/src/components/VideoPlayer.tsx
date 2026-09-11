@@ -6,9 +6,10 @@ interface VideoPlayerProps {
   streamUrl?: string;
   cameraId: string;
   title: string;
+  detections?: any[];
 }
 
-export default function VideoPlayer({ streamUrl, cameraId, title }: VideoPlayerProps) {
+export default function VideoPlayer({ streamUrl, cameraId, title, detections = [] }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -36,6 +37,62 @@ export default function VideoPlayer({ streamUrl, cameraId, title }: VideoPlayerP
       }
     }
   }, [streamUrl]);
+  useEffect(() => {
+    // Draw bounding boxes when detections change
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    
+    if (!canvas || !video || detections.length === 0) {
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Match canvas internal resolution to the video element's display size
+    canvas.width = video.clientWidth;
+    canvas.height = video.clientHeight;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Detections come in as [x1, y1, x2, y2] scaled 0-1 from backend
+    detections.forEach(det => {
+      const [x1, y1, x2, y2] = det.bbox;
+      const x = x1 * canvas.width;
+      const y = y1 * canvas.height;
+      const w = (x2 - x1) * canvas.width;
+      const h = (y2 - y1) * canvas.height;
+
+      // Color mapping
+      let color = '#00ff00'; // Default Green
+      if (det.class_name === 'person') color = '#00ffff'; // Cyan
+      if (['car', 'bus', 'truck', 'motorcycle'].includes(det.class_name)) color = '#ff00ff'; // Magenta
+      if (det.is_watchlisted) color = '#ff0000'; // RED for watchlisted
+
+      // Draw box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+
+      // Draw label
+      ctx.fillStyle = color;
+      const label = `${det.class_name} ${det.track_id ? '#' + det.track_id : ''}`;
+      ctx.font = '14px Arial';
+      ctx.fillText(label, x, y > 20 ? y - 5 : y + 15);
+      
+      // Draw Face Name if recognized
+      if (det.face_name && det.face_name !== "Unknown") {
+        ctx.fillStyle = det.is_watchlisted ? 'red' : 'yellow';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText(`ID: ${det.face_name}`, x, y + h + 20);
+      }
+    });
+
+  }, [detections]);
 
   return (
     <div className="relative bg-black rounded-xl overflow-hidden shadow-md aspect-video border border-gray-800">

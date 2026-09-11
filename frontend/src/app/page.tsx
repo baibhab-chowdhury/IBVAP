@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [stats, setStats] = useState({ people: 0, vehicles: 0 });
   const [wsConnected, setWsConnected] = useState(false);
+  const [wsData, setWsData] = useState<any>({});
 
   useEffect(() => {
     // Connect to the Python Backend WebSocket
@@ -21,6 +22,7 @@ export default function Dashboard() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        setWsData(data);
         
         // Update Live Stats
         let peopleCount = 0;
@@ -94,10 +96,10 @@ export default function Dashboard() {
         {/* 2x2 Video Grid */}
         <div className="flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" />
-            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" />
-            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" />
-            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" />
+            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" detections={wsData?.cameras?.["1"]?.detections || []} />
+            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" detections={wsData?.cameras?.["2"]?.detections || []} />
+            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" detections={wsData?.cameras?.["3"]?.detections || []} />
+            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" detections={wsData?.cameras?.["4"]?.detections || []} />
           </div>
         </div>
         
