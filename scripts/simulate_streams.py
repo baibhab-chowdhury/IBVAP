@@ -29,22 +29,32 @@ cam2_cmd = [
 ]
 cam2_proc = subprocess.Popen(cam2_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# Start Cam 1 (Slideshow Loop)
+# Generate a seamless playlist for Cam 1
 videos = list(FOOTAGE_DIR.glob("*.mp4"))
-print(f"[3] Starting Cam 1 Slideshow ({len(videos)} videos)...")
+playlist_path = SCRIPTS_DIR / "playlist.txt"
+
+print(f"[3] Generating seamless playlist of {len(videos)} videos for Cam 1...")
+with open(playlist_path, "w") as f:
+    for vid in videos:
+        # FFmpeg requires forward slashes and absolute paths in the text file
+        f.write(f"file '{vid.as_posix()}'\n")
+
+cam1_cmd = [
+    "ffmpeg", "-stream_loop", "-1", "-re", "-f", "concat", "-safe", "0", 
+    "-i", str(playlist_path),
+    "-an", "-c:v", "copy", "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam1"
+]
+cam1_proc = subprocess.Popen(cam1_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 try:
+    print("\n[SUCCESS] Both cameras are live! Press Ctrl+C to stop.")
     while True:
-        for vid in videos:
-            print(f"  -> [Cam 1 Playing]: {vid.name}")
-            cam1_cmd = [
-                "ffmpeg", "-re", "-i", str(vid),
-                "-an", "-c:v", "copy", "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam1"
-            ]
-            # Blocks until video finishes, then starts next
-            subprocess.run(cam1_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1)
 except KeyboardInterrupt:
     print("\nShutting down streams...")
+    cam1_proc.terminate()
     cam2_proc.terminate()
     mtx_proc.terminate()
+    if playlist_path.exists():
+        playlist_path.unlink()
     print("Done.")
