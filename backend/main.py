@@ -31,18 +31,11 @@ CAM2_DEFAULT_CLIP = os.getenv("CAM2_DEFAULT_CLIP", "C2.mp4")
 async def on_startup():
     await init_db()
     
-    # Start FFmpeg -> MediaMTX feeds
-    source_manager.start_cam1_slideshow(FOOTAGE_DIR)
-    
-    cam2_path = os.path.join(FOOTAGE_DIR, CAM2_DEFAULT_CLIP)
-    if os.path.exists(cam2_path):
-        source_manager.start_cam2(cam2_path)
-    else:
-        print(f"Warning: {cam2_path} not found.")
+    # Start the invincible Slideshow on Cam 1
+    source_manager.start_slideshow(FOOTAGE_DIR)
 
-    # Backend always reads from MediaMTX
+    # Backend reads from MediaMTX Cam 1
     stream_manager.add_stream(camera_id=1, rtsp_url="rtsp://localhost:8554/cam1")
-    stream_manager.add_stream(camera_id=2, rtsp_url="rtsp://localhost:8554/cam2")
     
     # Start the main background pipeline loop
     asyncio.create_task(run_pipeline())
@@ -53,11 +46,15 @@ class StreamSwitchRequest(BaseModel):
 
 @app.post("/api/cameras/{cam_id}/switch")
 async def switch_camera(cam_id: int, request: StreamSwitchRequest):
-    if cam_id != 2:
-        return {"status": "error", "message": "Only Cam 2 supports source switching"}
+    if cam_id != 1:
+        return {"status": "error", "message": "Invalid camera ID"}
         
-    source_manager.switch_cam2(request.url)
-    return {"status": "success", "message": f"Cam 2 switched to {request.url}"}
+    if request.url == "slideshow":
+        source_manager.start_slideshow(FOOTAGE_DIR)
+        return {"status": "success", "message": "Reverted to Slideshow"}
+    else:
+        source_manager.start_stream(request.url)
+        return {"status": "success", "message": f"Switched to {request.url}"}
 
 async def run_pipeline():
     """Main background loop that processes frames and broadcasts tracking data."""

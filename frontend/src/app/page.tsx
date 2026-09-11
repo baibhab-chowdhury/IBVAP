@@ -135,72 +135,55 @@ export default function Dashboard() {
       </div>
       
       <div className="flex flex-col xl:flex-row gap-6">
-        {/* 2x2 Video Grid */}
+        {/* Main Video Stream */}
         <div className="flex-grow">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            
-            {/* CAM 1 - SLIDESHOW */}
-            <div className="flex flex-col">
-              <div className="bg-gray-800 text-white px-4 py-2 rounded-t-xl text-sm font-bold flex justify-between">
-                <span>CAM 1: Master Slideshow</span>
-                <span className="text-red-400 animate-pulse">● REC</span>
-              </div>
-              <VideoPlayer cameraId="1" title="" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
-            </div>
-
-            {/* CAM 2 - SUBHODEEP / PHONE */}
-            <div className="flex flex-col">
-              <div className="bg-gray-800 text-white px-4 py-2 rounded-t-xl text-sm font-bold flex justify-between items-center">
-                <span>CAM 2: Facial Recognition Checkpoint</span>
+            <div className="flex flex-col h-full bg-black rounded-xl shadow-lg border border-gray-800 overflow-hidden">
+              <div className="bg-gray-800 text-white px-4 py-3 text-sm font-bold flex justify-between items-center border-b border-gray-700">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+                  Main Checkpoint Feed
+                </span>
                 
-                {/* Phone Connection Toggle */}
+                {/* Connection Toggle */}
                 {!IS_STATIC_DEMO && (
                   <div className="flex items-center space-x-2">
                     <input 
                       type="text" 
                       placeholder="http://192.168.1.5:8080/video" 
-                      className="text-black text-xs px-2 py-1 rounded w-48"
+                      className="text-black text-xs px-2 py-1.5 rounded w-56 border-none focus:ring-2 focus:ring-blue-500"
                       id="phoneUrlInput"
                       defaultValue="http://192.168.1.x:8080/video"
                     />
                     <button 
-                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded shadow"
+                      className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-1.5 rounded transition shadow-sm"
                       onClick={async () => {
                         const url = (document.getElementById('phoneUrlInput') as HTMLInputElement).value;
                         if (url) {
                           try {
-                            const res = await fetch('http://localhost:8000/api/cameras/2/switch', {
+                            const res = await fetch('http://localhost:8000/api/cameras/1/switch', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ url })
                             });
                             if (!res.ok) throw new Error("Switch failed");
-                            alert("Switched Cam 2 to Phone Stream!");
+                            alert("Switched Main Feed to Live Phone Stream!");
                           } catch (e) {
                             alert("Failed to connect phone. Is the backend running?");
                           }
-                        } else {
-                          // Switch back to script loop
-                          await fetch('http://localhost:8000/api/cameras/2/switch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: "C2.mp4" })
-                          });
-                          alert("Switched back to default Clip");
                         }
                       }}
                     >
                       Connect Phone
                     </button>
                     <button 
-                      className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-3 py-1 rounded shadow"
+                      className="bg-gray-700 hover:bg-gray-600 text-white font-medium text-xs px-4 py-1.5 rounded transition shadow-sm"
                       onClick={async () => {
-                          await fetch('http://localhost:8000/api/cameras/2/switch', {
+                          await fetch('http://localhost:8000/api/cameras/1/switch', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: "C2.mp4" })
+                            body: JSON.stringify({ url: "slideshow" })
                           });
-                          alert("Disconnected Phone. Reverted to Clip.");
+                          alert("Disconnected Phone. Reverted to Default Slideshow.");
                       }}
                     >
                       Disconnect
@@ -208,10 +191,10 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              <VideoPlayer cameraId="2" title="" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2_loop.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
+              <div className="flex-grow aspect-video w-full h-full relative">
+                <VideoPlayer cameraId="1" title="" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
+              </div>
             </div>
-
-          </div>
         </div>
         
         {/* Live Alert Feed */}
