@@ -138,10 +138,60 @@ export default function Dashboard() {
         {/* 2x2 Video Grid */}
         <div className="flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
-            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/E1_loop.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
-            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2_loop.mp4" : undefined} detections={wsData?.["3"]?.detections || []} />
-            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/F2_loop.mp4" : undefined} detections={wsData?.["4"]?.detections || []} />
+            
+            {/* CAM 1 - SLIDESHOW */}
+            <div className="flex flex-col">
+              <div className="bg-gray-800 text-white px-4 py-2 rounded-t-xl text-sm font-bold flex justify-between">
+                <span>CAM 1: Master Slideshow</span>
+                <span className="text-red-400 animate-pulse">● REC</span>
+              </div>
+              <VideoPlayer cameraId="1" title="" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
+            </div>
+
+            {/* CAM 2 - SUBHODEEP / PHONE */}
+            <div className="flex flex-col">
+              <div className="bg-gray-800 text-white px-4 py-2 rounded-t-xl text-sm font-bold flex justify-between items-center">
+                <span>CAM 2: Facial Recognition Checkpoint</span>
+                
+                {/* Phone Connection Toggle */}
+                {!IS_STATIC_DEMO && (
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="text" 
+                      placeholder="http://192.168.x.x:8080/video" 
+                      className="text-black text-xs px-2 py-1 rounded w-48"
+                      id="phoneUrlInput"
+                    />
+                    <button 
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded shadow"
+                      onClick={async () => {
+                        const url = (document.getElementById('phoneUrlInput') as HTMLInputElement).value;
+                        if (url) {
+                          await fetch('http://localhost:8000/api/cameras/2/switch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url })
+                          });
+                          alert("Switched Cam 2 to Phone Stream!");
+                        } else {
+                          // Switch back to script loop
+                          await fetch('http://localhost:8000/api/cameras/2/switch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: "rtsp://localhost:8554/cam2" })
+                          });
+                          alert("Switched back to C2.mp4 Loop");
+                        }
+                      }}
+                    >
+                      Connect Phone
+                    </button>
+                  </div>
+                )}
+              </div>
+              <VideoPlayer cameraId="2" title="" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2_loop.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
+            </div>
+
           </div>
         </div>
         

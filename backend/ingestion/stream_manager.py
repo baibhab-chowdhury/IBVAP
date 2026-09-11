@@ -103,4 +103,8 @@ class StreamManager:
             self.workers[camera_id].stop()
             del self.workers[camera_id]
 
+    def update_stream(self, camera_id, new_rtsp_url):
+        self.remove_stream(camera_id)
+        self.add_stream(camera_id, new_rtsp_url)
+
 stream_manager = StreamManager()

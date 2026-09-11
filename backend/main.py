@@ -24,13 +24,10 @@ from ingestion.stream_manager import stream_manager
 async def on_startup():
     await init_db()
     
-    # Auto-register the 4 approved camera streams
-    # These match the RTSP URLs served by scripts/simulate_rtsp.ps1
+    # Auto-register the 2-Camera Mode
     cameras = [
-        {"id": 1, "url": "rtsp://localhost:8554/cam1"},  # B1.mp4 - Border Road
-        # {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # E1.mp4 - Restricted Zone (Disabled for GPU performance)
-        {"id": 3, "url": "rtsp://localhost:8554/cam3"},  # C2.mp4 - Campus Checkpoint
-        # {"id": 4, "url": "rtsp://localhost:8554/cam4"},  # F2.mp4 - Night Perimeter (Disabled for GPU performance)
+        {"id": 1, "url": "rtsp://localhost:8554/cam1"},  # Slideshow Cam
+        {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # Subhodeep / Phone Cam
     ]
     
     for cam in cameras:
@@ -38,6 +35,15 @@ async def on_startup():
     
     # Start the main background pipeline loop
     asyncio.create_task(run_pipeline())
+
+from pydantic import BaseModel
+class StreamSwitchRequest(BaseModel):
+    url: str
+
+@app.post("/api/cameras/{cam_id}/switch")
+async def switch_camera(cam_id: int, request: StreamSwitchRequest):
+    stream_manager.update_stream(camera_id=cam_id, new_rtsp_url=request.url)
+    return {"status": "success", "message": f"Camera {cam_id} switched to {request.url}"}
 
 async def run_pipeline():
     """Main background loop that processes frames and broadcasts tracking data."""
