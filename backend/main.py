@@ -7,8 +7,8 @@ app = FastAPI(title="IBVAP Backend Server", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False, # Must be False when allow_origins is "*", otherwise FastAPI throws 403 Forbidden on WebSockets
+    allow_origin_regex=".*",  # This guarantees Starlette will NEVER return 403 on WebSocket origins
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
