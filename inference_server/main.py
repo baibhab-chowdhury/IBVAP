@@ -6,6 +6,7 @@ import numpy as np
 # Lazy loaded models to save VRAM
 from models.detector import get_detector
 from models.face_recognizer import get_face_recognizer
+from models.plate_reader import get_plate_reader
 
 app = FastAPI(title="IBVAP Inference Server", version="1.0")
 
@@ -24,7 +25,8 @@ async def health_check():
         "service": "IBVAP GPU Inference Server",
         "models_loaded": {
             "yolo": get_detector().is_loaded(),
-            "face": get_face_recognizer().is_loaded()
+            "face": get_face_recognizer().is_loaded(),
+            "anpr": get_plate_reader().is_loaded()
         }
     }
 
@@ -41,25 +43,35 @@ async def detect(
     detector = get_detector()
     detections = detector.predict(img, night_mode=night_mode)
     
-    # Run Face Recognition on any detected people
+    # Run Face Recognition and ANPR
     frs = get_face_recognizer()
-    if frs.is_loaded() or frs.get_enrolled_count() > 0:
-        for det in detections:
-            det["face_name"] = "Unknown"
-            det["is_watchlisted"] = False
+    anpr = get_plate_reader()
+    
+    for det in detections:
+        det["face_name"] = "Unknown"
+        det["is_watchlisted"] = False
+        det["plate_text"] = None
+        
+        x1, y1, x2, y2 = [int(v) for v in det["bbox"]]
+        h, w, _ = img.shape
+        crop = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+        
+        if crop.size == 0:
+            continue
             
-            if det["class_name"] == "person":
-                x1, y1, x2, y2 = [int(v) for v in det["bbox"]]
-                h, w, _ = img.shape
-                
-                # Expand crop slightly for better face detection
-                crop = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
-                
-                if crop.size > 0:
-                    match = frs.identify(crop)
-                    if match:
-                        det["face_name"] = match["match_name"]
-                        det["is_watchlisted"] = match["is_watchlisted"]
+        if det["class_name"] == "person":
+            if frs.is_loaded() or frs.get_enrolled_count() > 0:
+                match = frs.identify(crop)
+                if match:
+                    det["face_name"] = match["match_name"]
+                    det["is_watchlisted"] = match["is_watchlisted"]
+                    
+        elif det["class_name"] in ["car", "truck", "bus"]:
+            # Only run heavy OCR if the car is large enough (close to camera)
+            if (x2 - x1) > 150: 
+                plate_data = anpr.read_plate(crop)
+                if plate_data:
+                    det["plate_text"] = plate_data["text"]
     
     return {"detections": detections}
 

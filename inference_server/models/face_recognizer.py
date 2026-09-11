@@ -61,7 +61,7 @@ class FaceRecognizer:
             return True
         return False
 
-    def identify(self, img, threshold=1.2): # L2 distance threshold
+    def identify(self, img, threshold=1.65): # Extremely generous L2 distance threshold for hackathon demo
         """Searches the FAISS index for a matching face."""
         if self.index.ntotal == 0:
             return None

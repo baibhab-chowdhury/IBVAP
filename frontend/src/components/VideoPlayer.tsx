@@ -100,6 +100,15 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
         ctx.font = 'bold 16px Arial';
         ctx.fillText(`ID: ${det.face_name}`, x, y + h + 20);
       }
+      
+      // Draw License Plate if detected
+      if (det.plate_text) {
+        ctx.fillStyle = '#000000'; // Black background for plate
+        ctx.fillRect(x, y + h + 5, 120, 25);
+        ctx.fillStyle = '#ffffff'; // White text
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText(det.plate_text, x + 5, y + h + 22);
+      }
     });
 
   }, [detections]);

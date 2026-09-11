@@ -28,9 +28,9 @@ async def on_startup():
     # These match the RTSP URLs served by scripts/simulate_rtsp.ps1
     cameras = [
         {"id": 1, "url": "rtsp://localhost:8554/cam1"},  # B1.mp4 - Border Road
-        {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # E1.mp4 - Restricted Zone
+        # {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # E1.mp4 - Restricted Zone (Disabled for GPU performance)
         {"id": 3, "url": "rtsp://localhost:8554/cam3"},  # C2.mp4 - Campus Checkpoint
-        {"id": 4, "url": "rtsp://localhost:8554/cam4"},  # F2.mp4 - Night Perimeter
+        # {"id": 4, "url": "rtsp://localhost:8554/cam4"},  # F2.mp4 - Night Perimeter (Disabled for GPU performance)
     ]
     
     for cam in cameras:
@@ -72,20 +72,22 @@ async def run_pipeline():
                     class_name = CLASS_MAP.get(cls_id, "unknown")
                     
                     # Spatial matching: find the raw YOLO detection that matches this tracked box
-                    # to inherit its face_name and is_watchlisted properties
                     face_name = "Unknown"
                     is_watchlisted = False
+                    plate_text = None
                     
-                    if class_name == "person" and "raw_detections" in result:
+                    if "raw_detections" in result:
                         cx = (x1 + x2) / 2
                         cy = (y1 + y2) / 2
                         for raw_det in result["raw_detections"]:
-                            if raw_det.get("class_name") == "person":
+                            if raw_det.get("class_name") == class_name:
                                 rx1, ry1, rx2, ry2 = raw_det["bbox"]
-                                # Check if center of tracked box is inside the raw box
                                 if rx1 <= cx <= rx2 and ry1 <= cy <= ry2:
-                                    face_name = raw_det.get("face_name", "Unknown")
-                                    is_watchlisted = raw_det.get("is_watchlisted", False)
+                                    if class_name == "person":
+                                        face_name = raw_det.get("face_name", "Unknown")
+                                        is_watchlisted = raw_det.get("is_watchlisted", False)
+                                    elif class_name in ["car", "bus", "truck"]:
+                                        plate_text = raw_det.get("plate_text")
                                     break
                     
                     boxes.append({
@@ -95,7 +97,8 @@ async def run_pipeline():
                         "class_name": class_name,
                         "confidence": conf,
                         "face_name": face_name,
-                        "is_watchlisted": is_watchlisted
+                        "is_watchlisted": is_watchlisted,
+                        "plate_text": plate_text
                     })
                 
                 # Broadcast the live tracking coordinates to the React Dashboard
