@@ -57,7 +57,7 @@ foreach ($cam in $cameras) {
     # -an              = drop audio (prevents MediaMTX 400 Bad Request errors)
     $rtspUrl = "rtsp://localhost:8554/$($cam.Name)"
     
-    $ffmpegArgs = "-stream_loop -1 -re -i `"$videoPath`" -an -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp `"$rtspUrl`""
+    $ffmpegArgs = "-stream_loop -1 -re -i `"$videoPath`" -an -c:v copy -f rtsp -rtsp_transport tcp `"$rtspUrl`""
     
     $proc = Start-Process -FilePath "ffmpeg" -ArgumentList $ffmpegArgs -PassThru -WindowStyle Minimized
     $ffmpegProcesses += $proc
