@@ -28,11 +28,31 @@ export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, det
     // Otherwise, try to load the Live HLS Stream
     if (streamUrl) {
       if (Hls.isSupported()) {
-        const hls = new Hls();
+        const hls = new Hls({
+          // Reduce timeout thresholds to recover faster
+          manifestLoadingMaxRetry: 10,
+          manifestLoadingRetryDelay: 1000,
+        });
         hls.loadSource(streamUrl);
         hls.attachMedia(videoRef.current);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           videoRef.current?.play().catch(() => console.log("Autoplay prevented"));
+        });
+        
+        // Auto-recover from stream drops (bypasses 401/500 errors when video switches)
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.log("HLS Error:", data.type, "Attempting recovery...");
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.startLoad();
+            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              hls.recoverMediaError();
+            } else {
+              hls.destroy();
+              // Ultimate fallback: Just reload the page if the stream completely dies
+              setTimeout(() => window.location.reload(), 2000);
+            }
+          }
         });
         
         return () => {
