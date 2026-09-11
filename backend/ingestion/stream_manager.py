@@ -16,7 +16,7 @@ class StreamWorker:
         
         self.is_running = False
         self.thread = None
-        self.frame_queue = queue.Queue(maxsize=10) # Drop frames if AI is slow
+        self.frame_queue = queue.Queue(maxsize=1) # Drop all but newest frame to ensure ZERO lag
         
     def start(self):
         self.is_running = True
@@ -83,6 +83,7 @@ class StreamWorker:
             "camera_id": self.camera_id,
             "raw_frame": processed_frame,
             "annotated_frame": annotated_frame,
+            "raw_detections": detections,
             "tracking": tracked_data
         }
 

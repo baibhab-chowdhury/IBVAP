@@ -41,6 +41,26 @@ async def detect(
     detector = get_detector()
     detections = detector.predict(img, night_mode=night_mode)
     
+    # Run Face Recognition on any detected people
+    frs = get_face_recognizer()
+    if frs.is_loaded() or frs.get_enrolled_count() > 0:
+        for det in detections:
+            det["face_name"] = "Unknown"
+            det["is_watchlisted"] = False
+            
+            if det["class_name"] == "person":
+                x1, y1, x2, y2 = [int(v) for v in det["bbox"]]
+                h, w, _ = img.shape
+                
+                # Expand crop slightly for better face detection
+                crop = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+                
+                if crop.size > 0:
+                    match = frs.identify(crop)
+                    if match:
+                        det["face_name"] = match["match_name"]
+                        det["is_watchlisted"] = match["is_watchlisted"]
+    
     return {"detections": detections}
 
 @app.post("/face/enroll")

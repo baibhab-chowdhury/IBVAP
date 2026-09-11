@@ -69,12 +69,33 @@ async def run_pipeline():
                     cls_id = int(tracker_data.class_id[i])
                     conf = float(tracker_data.confidence[i])
                     
+                    class_name = CLASS_MAP.get(cls_id, "unknown")
+                    
+                    # Spatial matching: find the raw YOLO detection that matches this tracked box
+                    # to inherit its face_name and is_watchlisted properties
+                    face_name = "Unknown"
+                    is_watchlisted = False
+                    
+                    if class_name == "person" and "raw_detections" in result:
+                        cx = (x1 + x2) / 2
+                        cy = (y1 + y2) / 2
+                        for raw_det in result["raw_detections"]:
+                            if raw_det.get("class_name") == "person":
+                                rx1, ry1, rx2, ry2 = raw_det["bbox"]
+                                # Check if center of tracked box is inside the raw box
+                                if rx1 <= cx <= rx2 and ry1 <= cy <= ry2:
+                                    face_name = raw_det.get("face_name", "Unknown")
+                                    is_watchlisted = raw_det.get("is_watchlisted", False)
+                                    break
+                    
                     boxes.append({
                         "bbox": norm_box,
                         "track_id": track_id,
                         "class_id": cls_id,
-                        "class_name": CLASS_MAP.get(cls_id, "unknown"),
-                        "confidence": conf
+                        "class_name": class_name,
+                        "confidence": conf,
+                        "face_name": face_name,
+                        "is_watchlisted": is_watchlisted
                     })
                 
                 # Broadcast the live tracking coordinates to the React Dashboard
