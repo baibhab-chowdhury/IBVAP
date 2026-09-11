@@ -24,8 +24,17 @@ from ingestion.stream_manager import stream_manager
 async def on_startup():
     await init_db()
     
-    # Example: Start a test stream (this will eventually be driven by DB config)
-    # stream_manager.add_stream(camera_id=1, rtsp_url="rtsp://localhost:8554/cam1")
+    # Auto-register the 4 approved camera streams
+    # These match the RTSP URLs served by scripts/simulate_rtsp.ps1
+    cameras = [
+        {"id": 1, "url": "rtsp://localhost:8554/cam1"},  # B1.mp4 - Border Road
+        {"id": 2, "url": "rtsp://localhost:8554/cam2"},  # E1.mp4 - Restricted Zone
+        {"id": 3, "url": "rtsp://localhost:8554/cam3"},  # C2.mp4 - Campus Checkpoint
+        {"id": 4, "url": "rtsp://localhost:8554/cam4"},  # F2.mp4 - Night Perimeter
+    ]
+    
+    for cam in cameras:
+        stream_manager.add_stream(camera_id=cam["id"], rtsp_url=cam["url"])
     
     # Start the main background pipeline loop
     asyncio.create_task(run_pipeline())

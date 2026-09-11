@@ -49,10 +49,10 @@ export default function Dashboard() {
         {/* 2x2 Video Grid */}
         <div className="flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VideoPlayer cameraId="1" title="CAM 1: Border Road" />
-            <VideoPlayer cameraId="2" title="CAM 2: Main Gate" />
-            <VideoPlayer cameraId="3" title="CAM 3: Checkpost North" />
-            <VideoPlayer cameraId="4" title="CAM 4: Perimeter Fence" />
+            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1" />
+            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2" />
+            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3" />
+            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4" />
           </div>
         </div>
         

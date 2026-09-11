@@ -69,6 +69,15 @@ async def face_identify(face_img: UploadFile = File(...)):
         return {"status": "matched", "data": match}
     return {"status": "no_match"}
 
+@app.get("/face/list")
+async def face_list():
+    """Returns all enrolled faces and their names."""
+    frs = get_face_recognizer()
+    return {
+        "enrolled_count": frs.get_enrolled_count(),
+        "names": frs.get_enrolled_names()
+    }
+
 @app.post("/plate")
 async def plate_recognize(plate_img: UploadFile = File(...)):
     contents = await plate_img.read()
