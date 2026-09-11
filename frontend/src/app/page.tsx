@@ -10,8 +10,48 @@ export default function Dashboard() {
   const [wsConnected, setWsConnected] = useState(false);
   const [wsData, setWsData] = useState<any>({});
 
+  // ==========================================
+  // DEPLOYMENT TOGGLE
+  // SET TO TRUE for the public Vercel link.
+  // SET TO FALSE when running locally for the judges.
+  // ==========================================
+  const IS_STATIC_DEMO = true;
+
   useEffect(() => {
-    // Connect to the Python Backend WebSocket
+    if (IS_STATIC_DEMO) {
+      setWsConnected(true);
+      
+      // Simulate fluctuating stats
+      const statsInterval = setInterval(() => {
+        setStats({
+          people: Math.floor(Math.random() * 5) + 12, // 12-16 people
+          vehicles: Math.floor(Math.random() * 3) + 3 // 3-5 vehicles
+        });
+      }, 3000);
+      
+      // Simulate occasional alerts
+      const alertInterval = setInterval(() => {
+        if (Math.random() > 0.7) {
+          setAlerts(prev => {
+            const newAlert = {
+              id: Date.now(),
+              type: "ZONE INTRUSION",
+              severity: "HIGH",
+              cam: `Gate ${Math.floor(Math.random() * 4) + 1}`,
+              description: "Movement detected in restricted boundary."
+            };
+            return [newAlert, ...prev].slice(0, 10);
+          });
+        }
+      }, 8000);
+      
+      return () => {
+        clearInterval(statsInterval);
+        clearInterval(alertInterval);
+      };
+    }
+
+    // Connect to the Python Backend WebSocket (For Real Live Demo)
     const ws = new WebSocket('ws://localhost:8000/ws');
 
     ws.onopen = () => {
@@ -59,7 +99,7 @@ export default function Dashboard() {
     };
 
     return () => ws.close();
-  }, []);
+  }, [IS_STATIC_DEMO]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -98,10 +138,10 @@ export default function Dashboard() {
         {/* 2x2 Video Grid */}
         <div className="flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" detections={wsData?.["1"]?.detections || []} />
-            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" detections={wsData?.["2"]?.detections || []} />
-            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" detections={wsData?.["3"]?.detections || []} />
-            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" detections={wsData?.["4"]?.detections || []} />
+            <VideoPlayer cameraId="1" title="CAM 1: Border Road" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
+            <VideoPlayer cameraId="2" title="CAM 2: Restricted Zone" streamUrl="http://localhost:8888/cam2/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/E1.mp4" : undefined} detections={wsData?.["2"]?.detections || []} />
+            <VideoPlayer cameraId="3" title="CAM 3: Campus Checkpoint" streamUrl="http://localhost:8888/cam3/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/C2.mp4" : undefined} detections={wsData?.["3"]?.detections || []} />
+            <VideoPlayer cameraId="4" title="CAM 4: Night Perimeter" streamUrl="http://localhost:8888/cam4/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/F2.mp4" : undefined} detections={wsData?.["4"]?.detections || []} />
           </div>
         </div>
         

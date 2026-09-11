@@ -4,18 +4,29 @@ import Hls from 'hls.js';
 
 interface VideoPlayerProps {
   streamUrl?: string;
+  rawMp4Url?: string;
   cameraId: string;
   title: string;
   detections?: any[];
 }
 
-export default function VideoPlayer({ streamUrl, cameraId, title, detections = [] }: VideoPlayerProps) {
+export default function VideoPlayer({ streamUrl, rawMp4Url, cameraId, title, detections = [] }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // If we have a stream URL and the browser supports HLS
-    if (videoRef.current && streamUrl) {
+    if (!videoRef.current) return;
+    
+    // If we are in Static Demo Mode (rawMp4Url provided)
+    if (rawMp4Url) {
+      videoRef.current.src = rawMp4Url;
+      videoRef.current.loop = true;
+      videoRef.current.play().catch(e => console.log("Autoplay blocked"));
+      return;
+    }
+
+    // Otherwise, try to load the Live HLS Stream
+    if (streamUrl) {
       if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(streamUrl);
@@ -28,7 +39,6 @@ export default function VideoPlayer({ streamUrl, cameraId, title, detections = [
           hls.destroy();
         };
       } 
-      // Fallback for Safari which supports HLS natively
       else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = streamUrl;
         videoRef.current.addEventListener('loadedmetadata', () => {
@@ -36,7 +46,7 @@ export default function VideoPlayer({ streamUrl, cameraId, title, detections = [
         });
       }
     }
-  }, [streamUrl]);
+  }, [streamUrl, rawMp4Url]);
   useEffect(() => {
     // Draw bounding boxes when detections change
     const canvas = canvasRef.current;
