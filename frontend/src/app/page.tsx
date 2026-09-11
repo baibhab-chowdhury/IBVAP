@@ -15,7 +15,7 @@ export default function Dashboard() {
   // SET TO TRUE for the public Vercel link.
   // SET TO FALSE when running locally for the judges.
   // ==========================================
-  const IS_STATIC_DEMO = true;
+  const IS_STATIC_DEMO = false;
 
   useEffect(() => {
     if (IS_STATIC_DEMO) {
