@@ -22,25 +22,31 @@ class SourceManager:
             print("No footage found for slideshow.")
             return
 
-        playlist_path = self.scripts_dir / "playlist.txt"
-        with open(playlist_path, "w") as f:
-            for vid in videos:
-                f.write(f"file '{vid.as_posix().replace(chr(39), chr(92)+chr(39))}'\n")
+        # Pick the largest video file to loop for the demo to ensure long, stable footage
+        # Concat demuxer crashes if files have different codecs/resolutions
+        videos.sort(key=lambda x: x.stat().st_size, reverse=True)
+        target_video = videos[0]
+
+        mediamtx_host = os.environ.get('MEDIAMTX_HOST', 'localhost')
 
         cmd = [
-            "ffmpeg", "-stream_loop", "-1", "-re", "-f", "concat", "-safe", "0",
-            "-i", str(playlist_path),
+            "ffmpeg", "-stream_loop", "-1", "-re", 
+            "-i", str(target_video),
             "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
             "-an", "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-            "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam1"
+            "-f", "rtsp", "-rtsp_transport", "tcp", f"rtsp://{mediamtx_host}:8554/cam1"
         ]
         
         import threading
         import time
         
+        # Stop any existing keep_alive thread gracefully
+        self.running_slideshow = False
+        time.sleep(1.5) # Give the old thread time to exit
+        
+        self.running_slideshow = True
+        
         def keep_alive():
-            # Check a flag to ensure we don't respawn if intentionally switched
-            self.running_slideshow = True
             while self.running_slideshow:
                 proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 self.processes[1] = {"source": "slideshow", "proc": proc}
@@ -58,10 +64,12 @@ class SourceManager:
         if 1 in self.processes:
             self._kill_process(1)
             
+        mediamtx_host = os.environ.get('MEDIAMTX_HOST', 'localhost')
+
         cmd = [
             "ffmpeg", "-re", "-i", source_url,
             "-an", "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-            "-f", "rtsp", "-rtsp_transport", "tcp", "rtsp://localhost:8554/cam1"
+            "-f", "rtsp", "-rtsp_transport", "tcp", f"rtsp://{mediamtx_host}:8554/cam1"
         ]
         
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

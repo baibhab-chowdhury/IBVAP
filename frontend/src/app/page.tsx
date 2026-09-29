@@ -83,7 +83,9 @@ export default function Dashboard() {
         } else if (data.type === "alert") {
           // Prepend new alert to the feed
           setAlerts((prev: any) => {
-            const newAlerts = [data.alert, ...prev];
+            const alertData = data.data || data.alert;
+            if (!alertData) return prev;
+            const newAlerts = [alertData, ...prev];
             return newAlerts.slice(0, 20); // Keep max 20 alerts
           });
         }
@@ -126,7 +128,7 @@ export default function Dashboard() {
         </div>
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
           <div className="p-3 bg-red-100 text-red-600 rounded-lg mr-4"><ShieldAlert size={24}/></div>
-          <div><p className="text-sm text-gray-500">Critical Alerts</p><p className="text-2xl font-bold">{alerts.filter(a => a.severity === 'CRITICAL').length}</p></div>
+          <div><p className="text-sm text-gray-500">Critical Alerts</p><p className="text-2xl font-bold">{alerts.filter(a => a?.severity === 'CRITICAL').length}</p></div>
         </div>
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
           <div className="p-3 bg-green-100 text-green-600 rounded-lg mr-4"><Activity size={24}/></div>
@@ -192,7 +194,7 @@ export default function Dashboard() {
                 )}
               </div>
               <div className="flex-grow aspect-video w-full h-full relative">
-                <VideoPlayer cameraId="1" title="" streamUrl="http://localhost:8888/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
+                <VideoPlayer cameraId="1" title="" streamUrl="http://localhost:8000/hls/cam1/index.m3u8" rawMp4Url={IS_STATIC_DEMO ? "/videos/B1_loop.mp4" : undefined} detections={wsData?.["1"]?.detections || []} />
               </div>
             </div>
         </div>
@@ -208,18 +210,18 @@ export default function Dashboard() {
           <div className="p-4 flex-grow overflow-y-auto space-y-4">
             {alerts.map((a, idx) => (
               <div key={idx} className="border border-gray-100 shadow-sm rounded-lg overflow-hidden">
-                <div className={`h-1 w-full ${a.severity === 'CRITICAL' ? 'bg-red-500' : 'bg-orange-400'}`}></div>
+                <div className={`h-1 w-full ${a?.severity === 'CRITICAL' ? 'bg-red-500' : 'bg-orange-400'}`}></div>
                 <div className="p-3 bg-gray-50">
                   <div className="flex justify-between items-start mb-1">
-                    <p className={`text-xs font-bold ${a.severity === 'CRITICAL' ? 'text-red-700' : 'text-orange-700'}`}>
-                      {a.type}
+                    <p className={`text-xs font-bold ${a?.severity === 'CRITICAL' ? 'text-red-700' : 'text-orange-700'}`}>
+                      {a?.type}
                     </p>
                     <p className="text-[10px] text-gray-500 font-medium">Just now</p>
                   </div>
-                  <p className="text-sm text-gray-800 font-medium mb-1">{a.description || a.desc}</p>
+                  <p className="text-sm text-gray-800 font-medium mb-1">{a?.description || a?.desc}</p>
                   <p className="text-xs text-gray-500 flex items-center">
                     <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
-                    CAM {a.camera_id || a.cam}
+                    CAM {a?.camera_id || a?.cam}
                   </p>
                 </div>
               </div>

@@ -26,9 +26,26 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
-        {children}
+        <nav className="bg-gray-900 text-white shadow-md">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center justify-between h-14">
+              <div className="flex items-center space-x-8">
+                <span className="font-bold text-lg tracking-wider text-blue-400">IBVAP</span>
+                <div className="flex space-x-4">
+                  <a href="/" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition">Dashboard</a>
+                  <a href="/alerts" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition">Alert History</a>
+                  <a href="/watchlist" className="px-3 py-2 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-700 transition">Watchlist Manager</a>
+                  <a href="/anpr" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition">ANPR Records</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <main>
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -19,7 +19,7 @@ class CameraResponse(CameraCreate):
     status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @router.get("/", response_model=list[CameraResponse])
 async def get_cameras(db: AsyncSession = Depends(get_db)):

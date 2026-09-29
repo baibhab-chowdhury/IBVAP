@@ -43,6 +43,10 @@ class StreamWorker:
                 cap = cv2.VideoCapture(self.rtsp_url)
                 continue
                 
+            # Force all incoming frames (like 1920x1080 IP Webcams) to standard 1280x720
+            # This ensures the React UI's drawn zones align perfectly with the backend's analytics
+            frame = cv2.resize(frame, (1280, 720))
+                
             # Always add to rolling buffer for recording
             self.frame_buffer.add_frame(frame.copy())
             
@@ -100,12 +104,33 @@ class StreamWorker:
             a = alert_engine.process_behavior("CROWD_DENSITY", self.camera_id, alert_data["zone_id"], alert_data["description"])
             if a: new_alerts.append(a)
 
+        # 6. Face & ANPR Alert Generation
+        if detections:  # detections = raw YOLO detections from inference server
+            for det in detections:
+                # Face watchlist/authorized alerts
+                if det.get("face_name") and det["face_name"] != "Unknown":
+                    match_data = {
+                        "match_name": det["face_name"],
+                        "distance": 0.0,  # Distance not available from pipeline, placeholder
+                        "is_watchlisted": det.get("is_watchlisted", False)
+                    }
+                    a = alert_engine.process_face_match(match_data, self.camera_id)
+                    if a: new_alerts.append(a)
+                
+                # ANPR plate alerts
+                if det.get("plate_text"):
+                    a = alert_engine.process_plate_detection(det["plate_text"], self.camera_id)
+                    if a: new_alerts.append(a)
+
         # Broadcast alerts and trigger event recording
         for alert in new_alerts:
             # Broadcast to frontend
             asyncio.create_task(manager.broadcast_json({"type": "alert", "data": alert}))
             # Save snapshot & video clip
             asyncio.create_task(event_recorder.record_event(alert, self.frame_buffer, processed_frame.copy()))
+            # Persist alert for history API
+            from api.routes_alerts import record_alert
+            record_alert(alert)
         
         return {
             "camera_id": self.camera_id,

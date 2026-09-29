@@ -6,7 +6,7 @@
 paths:
   all_others:
 
-hlsAllowOrigin: '*'
-webrtcAllowOrigin: '*'
+hlsAllowOrigins: ['http://localhost:3000']
+webrtcAllowOrigins: ['http://localhost:3000']
 api: yes
-apiAllowOrigin: '*'
+apiAllowOrigins: ['http://localhost:3000']

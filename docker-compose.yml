@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    container_name: mediamtx
+    ports:
+      - "8554:8554"
+      - "1935:1935"
+      - "8888:8888"
+      - "8889:8889"
+    environment:
+      - MTX_API=yes
+      - MTX_WEBRTCADDITIONALHOSTS=localhost
+    restart: unless-stopped
+
+  inference_server:
+    build:
+      context: ./inference_server
+      dockerfile: Dockerfile
+    container_name: inference_server
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    # uncomment below for GPU support if nvidia-container-toolkit is installed
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MEDIAMTX_HOST=mediamtx
+      - INFERENCE_SERVER_URL=http://inference_server:8001
+      - FOOTAGE_DIR=/footage
+    volumes:
+      - ./backend/events_storage:/app/events_storage
+      - ./backend/ibvap.db:/app/ibvap.db
+      - ./footage:/footage
+    depends_on:
+      - mediamtx
+      - inference_server
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      - NEXT_PUBLIC_MEDIAMTX_URL=http://localhost:8889
+      - NEXT_PUBLIC_INFERENCE_URL=http://localhost:8001
+    depends_on:
+      - backend
+    restart: unless-stopped

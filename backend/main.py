@@ -1,7 +1,9 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from database.database import init_db
 from api import routes_cameras
+import os
 
 app = FastAPI(title="IBVAP Backend Server", version="1.0")
 
@@ -13,8 +15,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount the static directory for evidence clips
+os.makedirs("events_storage", exist_ok=True)
+app.mount("/events_storage", StaticFiles(directory="events_storage"), name="events_storage")
+
 # Include Routers
 app.include_router(routes_cameras.router, prefix="/api/cameras", tags=["cameras"])
+from api import routes_zones, routes_alerts
+app.include_router(routes_zones.router, prefix="/api/zones", tags=["zones"])
+app.include_router(routes_alerts.router, prefix="/api/alerts", tags=["alerts"])
 
 import asyncio
 import os
@@ -35,7 +44,17 @@ async def on_startup():
     source_manager.start_slideshow(FOOTAGE_DIR)
 
     # Backend reads from MediaMTX Cam 1
-    stream_manager.add_stream(camera_id=1, rtsp_url="rtsp://localhost:8554/cam1")
+    mediamtx_host = os.getenv("MEDIAMTX_HOST", "localhost")
+    stream_manager.add_stream(camera_id=1, rtsp_url=f"rtsp://{mediamtx_host}:8554/cam1")
+    
+    # Load a default demo zone for intrusion detection
+    from analytics.virtual_fence import fence_manager
+    print("[Startup] Initialized Watchlist cache.")
+    
+    # Reload all zones from the database correctly
+    from api.routes_zones import _zones_store
+    fence_manager.load_zones_from_db(_zones_store)
+    print("[Startup] Loaded empty virtual fence zones.")
     
     # Start the main background pipeline loop
     asyncio.create_task(run_pipeline())
@@ -55,6 +74,45 @@ async def switch_camera(cam_id: int, request: StreamSwitchRequest):
     else:
         source_manager.start_stream(request.url)
         return {"status": "success", "message": f"Switched to {request.url}"}
+
+import httpx
+from fastapi import Request
+from fastapi.responses import StreamingResponse
+
+@app.get("/hls/{path:path}")
+async def proxy_hls(path: str, request: Request):
+    """Proxy HLS through FastAPI to bypass CORS and Secure Cookie restrictions from MediaMTX."""
+    mediamtx_host = os.getenv("MEDIAMTX_HOST", "localhost")
+    url = f"http://{mediamtx_host}:8888/{path}"
+    if request.url.query:
+        url += "?" + request.url.query
+    
+    # Forward the request, passing along headers (except Host to avoid mismatches)
+    headers = {k: v for k, v in request.headers.items() if k.lower() != 'host'}
+    
+    client = httpx.AsyncClient()
+    req = client.build_request(request.method, url, headers=headers)
+    res = await client.send(req, stream=True)
+    
+    # Strip headers that shouldn't be proxied back
+    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'access-control-allow-origin', 'access-control-allow-credentials']
+    resp_headers = {}
+    for k, v in res.headers.items():
+        if k.lower() not in excluded_headers:
+            # Fix redirect location pointing to root
+            if k.lower() == 'location' and v.startswith('/'):
+                v = '/hls' + v
+            # Strip Secure flag from cookies to ensure they work on http://localhost
+            if k.lower() == 'set-cookie':
+                v = v.replace('; Secure', '').replace('; SameSite=None', '')
+            resp_headers[k] = v
+    
+    return StreamingResponse(
+        res.aiter_raw(), 
+        status_code=res.status_code, 
+        headers=resp_headers,
+        media_type=res.headers.get("content-type")
+    )
 
 async def run_pipeline():
     """Main background loop that processes frames and broadcasts tracking data."""

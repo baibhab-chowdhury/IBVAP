@@ -7,7 +7,7 @@ class BehaviorAnalyzer:
         # Format: { "camId_zoneId_trackId": first_seen_timestamp }
         self.zone_entry_times = {}
 
-    def analyze_loitering(self, intrusions, camera_id, loiter_threshold=60.0):
+    def analyze_loitering(self, intrusions, camera_id, loiter_threshold=10.0):
         """
         intrusions: current active intrusions from virtual_fence
         loiter_threshold: seconds an object must be in the zone to trigger an alert

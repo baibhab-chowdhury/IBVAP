@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Upload, UserX, UserPlus, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, UserX, UserPlus, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 
-// Mock data interface until connected to backend
 interface EnrolledFace {
   id: number;
   name: string;
@@ -14,23 +13,63 @@ interface EnrolledFace {
 export default function WatchlistPage() {
   const [name, setName] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  
-  // Mock state
-  const [faces, setFaces] = useState<EnrolledFace[]>([
-    { id: 1, name: "Unknown Subject Alpha", threat_level: "High", enrolled_date: "2024-03-10" },
-  ]);
+  const [faces, setFaces] = useState<EnrolledFace[]>([]);
+  const [enrollStatus, setEnrollStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleEnroll = (e: React.FormEvent) => {
+  // Fetch enrolled faces on mount
+  useEffect(() => {
+    fetch('http://localhost:8001/face/list')
+      .then(res => res.json())
+      .then(data => {
+        const enrolled = (data.names || []).map((n: string, i: number) => ({
+          id: i + 1,
+          name: n,
+          threat_level: n.toLowerCase().includes('suspect') || n.toLowerCase().includes('watchlist') ? 'High' : 'Medium',
+          enrolled_date: new Date().toISOString().split('T')[0]
+        }));
+        setFaces(enrolled);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !file) return;
     
-    // TODO: Connect to backend API `POST /api/watchlist`
-    // which forwards the photo to the GPU Server `POST /face/enroll`
+    setLoading(true);
+    setEnrollStatus(null);
     
-    alert(`Enrolling ${name}... (Backend integration pending)`);
-    setFaces([...faces, { id: Date.now(), name, threat_level: "Medium", enrolled_date: new Date().toISOString().split('T')[0] }]);
-    setName('');
-    setFile(null);
+    try {
+      const formData = new FormData();
+      formData.append('face_img', file);
+      
+      const res = await fetch(`http://localhost:8001/face/enroll?person_name=${encodeURIComponent(name)}`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      
+      if (data.status === 'success') {
+        setEnrollStatus('success');
+        setFaces(prev => [...prev, {
+          id: Date.now(),
+          name,
+          threat_level: name.toLowerCase().includes('suspect') || name.toLowerCase().includes('watchlist') ? 'High' : 'Medium',
+          enrolled_date: new Date().toISOString().split('T')[0]
+        }]);
+        setName('');
+        setFile(null);
+      } else {
+        setEnrollStatus('failed');
+      }
+    } catch {
+      setEnrollStatus('error');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setEnrollStatus(null), 4000);
+    }
   };
 
   return (
@@ -49,6 +88,23 @@ export default function WatchlistPage() {
             <UserPlus className="mr-2" size={20} />
             Enroll New Face
           </h2>
+          
+          {enrollStatus === 'success' && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center text-green-800 text-sm">
+              <CheckCircle size={16} className="mr-2" /> Face enrolled successfully!
+            </div>
+          )}
+          {enrollStatus === 'failed' && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-800 text-sm">
+              <XCircle size={16} className="mr-2" /> No face found. Use a clear, front-facing photo.
+            </div>
+          )}
+          {enrollStatus === 'error' && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-800 text-sm">
+              <XCircle size={16} className="mr-2" /> Connection failed. Is the inference server running?
+            </div>
+          )}
+          
           <form onSubmit={handleEnroll} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name / ID</label>
@@ -57,9 +113,10 @@ export default function WatchlistPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full border border-gray-300 rounded-md p-2"
-                placeholder="e.g. John Doe"
+                placeholder='e.g. "Suspect Alpha" for watchlist'
                 required
               />
+              <p className="text-xs text-gray-400 mt-1">Include &quot;suspect&quot; or &quot;watchlist&quot; in name for high-threat flagging</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Face Photo</label>
@@ -82,9 +139,10 @@ export default function WatchlistPage() {
             </div>
             <button 
               type="submit" 
-              className="w-full bg-blue-600 text-white rounded-md py-2 font-medium hover:bg-blue-700 transition"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white rounded-md py-2 font-medium hover:bg-blue-700 transition disabled:opacity-50"
             >
-              Enroll into Database
+              {loading ? 'Enrolling...' : 'Enroll into Database'}
             </button>
           </form>
         </div>
@@ -102,7 +160,7 @@ export default function WatchlistPage() {
                 <div className="flex-grow">
                   <h3 className="font-semibold text-gray-800">{face.name}</h3>
                   <p className="text-xs text-gray-500">Enrolled: {face.enrolled_date}</p>
-                  <span className="inline-block mt-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">
+                  <span className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded ${face.threat_level === 'High' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                     {face.threat_level} Threat
                   </span>
                 </div>
@@ -111,6 +169,11 @@ export default function WatchlistPage() {
                 </button>
               </div>
             ))}
+            {faces.length === 0 && (
+              <div className="col-span-2 text-center p-8 text-gray-500">
+                No faces enrolled yet. Use the form to add subjects.
+              </div>
+            )}
           </div>
         </div>
       </div>

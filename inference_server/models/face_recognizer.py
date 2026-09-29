@@ -32,20 +32,26 @@ class FaceRecognizer:
 
     def extract_embedding(self, img):
         self.load()
-        faces = self.app.get(img)
+        
+        # Pad image to square to prevent RetinaFace from heavily distorting person crops
+        h, w = img.shape[:2]
+        size = max(h, w)
+        square_img = np.zeros((size, size, 3), dtype=np.uint8)
+        
+        # Center the original image in the square
+        y_offset = (size - h) // 2
+        x_offset = (size - w) // 2
+        square_img[y_offset:y_offset+h, x_offset:x_offset+w] = img
+        
+        # Resize to 640x640 so the detector has enough pixels to find small/far faces
+        square_img = cv2.resize(square_img, (640, 640))
+        
+        faces = self.app.get(square_img)
         if not faces:
             return None
         
-        # If multiple faces in crop, assume the largest face is the target
         faces = sorted(faces, key=lambda x: (x.bbox[2]-x.bbox[0]) * (x.bbox[3]-x.bbox[1]), reverse=True)
         target_face = faces[0]
-        
-        # QUALITY GATE: Face must be at least 80x80 pixels for reliable recognition
-        width = target_face.bbox[2] - target_face.bbox[0]
-        height = target_face.bbox[3] - target_face.bbox[1]
-        
-        if width < 30 or height < 30:
-            return None # Face too blurry/distant, discard to save compute
             
         return target_face.embedding
 
@@ -61,7 +67,7 @@ class FaceRecognizer:
             return True
         return False
 
-    def identify(self, img, threshold=1.65): # Extremely generous L2 distance threshold for hackathon demo
+    def identify(self, img, threshold=1.85): # Extremely generous L2 distance threshold for hackathon demo
         """Searches the FAISS index for a matching face."""
         if self.index.ntotal == 0:
             return None
